@@ -1,8 +1,8 @@
 import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router';
 import { ProfileContext } from '../contexts/ProfileContext.jsx';
-import Form from '../components/Form.jsx';
 import { registerUser, loginUser } from '../services/authService.js';
+
 
 export default function Main() {
   // Access the login function from context
@@ -75,20 +75,28 @@ export default function Main() {
       </div>
 
       {/* Our reusable form component */}
-      <Form
-        handleSubmit={handleSubmit}
-        handleUsernameInput={handleUsernameInput}
-        handlePasswordInput={handlePasswordInput}
-        username={username}
-        password={password}
-        isLoginMode={isLoginMode}
-        submitBtnText={submitBtnText}
-      />
+      <form className="login-form" onSubmit={handleSubmit}>
+      <div className="input-wrapper">
+        <input
+          onChange={handleUsernameInput} 
+          value={username}
+          type='text'
+          placeholder='Username' />
+        <input
+          onChange={handlePasswordInput} 
+          value={password}
+          type='password'
+          placeholder='Password' />
+      </div>
+      <button className="btn login-btn">
+        {submitBtnText}
+      </button>
+    </form>
 
       {/* Toggle login/signup button */}
       <div className="signup-wrapper">
         <p>{modeText}</p>
-        <button onClick={handleSignUpText} className="login-btn signup-btn">
+        <button onClick={handleSignUpText} className="btn login-btn signup-btn">
           {toggleBtnText}
         </button>
       </div>

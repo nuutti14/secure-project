@@ -1,7 +1,4 @@
-// const express = require('express');
-// const cors = require('cors');
-// const pool = require('./db');
-// require('dotenv').config();
+
 import jwt from 'jsonwebtoken';
 import bcryptjs from 'bcryptjs';
 import { configDotenv } from 'dotenv';
@@ -13,11 +10,8 @@ import pool from './db.js';
 configDotenv();
 
 
-// Temporary in-memory user storage
-const users = [];
-
 // Secret key for signing JWTs
-const SECRET_KEY = 'my_secrete_key';
+const JWT_KEY = process.env.JWT_KEY;
 
 // Initialize the Express app
 const app = express();
@@ -86,7 +80,7 @@ app.post('/login', async (req, res) => {
 
     // Create a JWT token
     const payload = { username };
-    const token = jwt.sign(payload, SECRET_KEY, { expiresIn: '24h' });
+    const token = jwt.sign(payload, JWT_KEY, { expiresIn: '24h' });
 
     res.status(200).json({ token, success: true, message: 'Logged in successfully!' });
   } catch (err) {
@@ -110,6 +104,12 @@ async function addEmployee({ name, role, department }) {
   return rows[0];
 }
 
+async function deleteEmployee(id) {
+  const text = `DELETE FROM employees WHERE id = $1 RETURNING *`;
+  const { rows } = await pool.query(text, [id]);
+  return rows[0];
+}
+
 // Middleware to Protect Routes
 const loginMiddleware = async (req, res, next) => {
   const authorization = req.headers['authorization'];
@@ -121,7 +121,7 @@ const loginMiddleware = async (req, res, next) => {
   }
 
   // Verify token
-  jwt.verify(token, SECRET_KEY, (err, user) => {
+  jwt.verify(token, JWT_KEY, (err, user) => {
     if (err) return res.status(403).json({ success: false, message: 'Invalid token' });
 
     req.user = user;
@@ -177,6 +177,21 @@ app.post('/employees', loginMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Error inserting employee', err);
     res.status(500).json({ success: false, message: 'Database error' });
+  }
+});
+
+app.delete('/employees/:id', loginMiddleware, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const deleted = await deleteEmployee(id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+    res.json({ success: true, message: 'Employee deleted', employee: deleted });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server Error' });
   }
 });
 

@@ -1,23 +1,20 @@
 const url = 'http://localhost:8080';
 
-// Function to handle user registration
 const registerUser = async (username, password) => {
 
-  // error handling
   try {
     const res = await fetch(`${url}/register`, {
-      method: 'POST', // HTTP POST request
-      headers: { 'Content-Type': 'application/json' }, // Sending JSON
-      body: JSON.stringify({ username, password }) // Payload
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ username, password }) 
     });
 
-    // Check if request was successful
     if (!res.ok) {
       console.error('Registration failed');
-      return res.json(); // Still return the error message
+      return res.json();
     }
 
-    return res.json(); // Return server response (success, token, etc.)
+    return res.json();
   } catch (err) {
     console.error('Registration error:', err);
     return { success: false, message: 'Network error' };
@@ -25,9 +22,7 @@ const registerUser = async (username, password) => {
 
 };
 
-// Function to handle user login
 const loginUser = async (username, password) => {
-  // error handling
   try {
     console.log('Attempting login with:', username);
     const res = await fetch(`${url}/login`, {
@@ -40,15 +35,14 @@ const loginUser = async (username, password) => {
     
     if (!res.ok) {
       console.error('Login failed');
-      return res.json(); // return the error message
+      return res.json();
     }
 
-    return res.json(); // Server sends back token if login successful
+    return res.json();
   } catch (err) {
     console.error('Login error:', err);
     return { success: false, message: 'Network error' };
   }   
 };
 
-// Export both functions so we can use them elsewhere
 export { registerUser, loginUser };

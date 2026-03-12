@@ -6,7 +6,6 @@ import Box from '@mui/material/Box';
 import Modal from '@mui/material/Modal';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import Input from '@mui/material/Input';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 
@@ -22,10 +21,9 @@ function EmployeeDirectory() {
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
-    reset(); // clear form values when closing modal
+    reset();
   };
 
-  // react-hook-form for employee form
   const {
     register,
     handleSubmit: handleFormSubmit,
@@ -60,7 +58,6 @@ function EmployeeDirectory() {
   };
 
   useEffect(() => {
-    // Redirect to login if no token
     if (!token) {
       navigate('/');
       return;
@@ -72,12 +69,11 @@ function EmployeeDirectory() {
   const handleLogout = () => {
     const confirmation = confirm('Are you sure you wanna logout?');
     if (confirmation) {
-      logout(); // Remove token from localStorage
-      navigate('/'); // Redirect to home page (login screen)
+      logout();
+      navigate('/');
     }
   };
 
-  // on-submit handler for new employee form
   const onAdd = async (formData) => {
     try {
       const res = await fetch('http://localhost:8080/employees', {
@@ -97,7 +93,30 @@ function EmployeeDirectory() {
       setError(err.message);
     }
   };
-  
+
+  const onDelete = async (employeeId) => {
+    if (!window.confirm("Are you sure you want to delete this employee?")) return;
+
+    try {
+        const res = await fetch(`http://localhost:8080/employees/${employeeId}`, {
+        method: 'DELETE',
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to delete');
+    }
+
+    await loadEmployees();
+
+    } catch (err) {
+        console.error('delete employee error', err);
+        setError(err.message);
+    }
+  };
 
   if (loading) return <div style={{ padding: '20px' }}>Loading...</div>;
 
@@ -124,8 +143,8 @@ function EmployeeDirectory() {
         >
           Search
         </button>
+        <button className='btn add-btn' onClick={handleOpen}>Add Employee</button>
         </div>
-        <Button className='add-employee' onClick={handleOpen}>Add Employee</Button>
             <Modal
                 open={open}
                 onClose={handleClose}
@@ -154,7 +173,6 @@ function EmployeeDirectory() {
                       error={!!errors.name}
                       helperText={errors.name?.message}
                     />
-
                     <TextField
                       label="Role"
                       fullWidth
@@ -167,7 +185,6 @@ function EmployeeDirectory() {
                       error={!!errors.role}
                       helperText={errors.role?.message}
                     />
-
                     <TextField
                       label="Department"
                       fullWidth
@@ -206,6 +223,9 @@ function EmployeeDirectory() {
               <td>{emp.name}</td>
               <td>{emp.role}</td>
               <td>{emp.department}</td>
+              <td>
+                <button onClick={() => onDelete(emp.id)}>X</button>
+            </td>
             </tr>
           ))}
         </tbody>
