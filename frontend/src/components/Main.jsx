@@ -2,6 +2,8 @@ import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router';
 import { ProfileContext } from '../contexts/ProfileContext.jsx';
 import { registerUser, loginUser } from '../services/authService.js';
+import { useForm } from 'react-hook-form';
+
 
 
 export default function Main() {
@@ -11,9 +13,7 @@ export default function Main() {
   // Hook from React Router to navigate pages
   const navigate = useNavigate();
 
-  // State for form input
-  const [ username, setUsername ] = useState('');
-  const [ password, setPassword ] = useState('');
+  // Validation form management (username/password)
 
   // State to store server response or error
   const [ data, setData ] = useState('');
@@ -27,23 +27,33 @@ export default function Main() {
   const toggleBtnText = isLoginMode ? 'Sign up' : 'Login';
   const modeText = isLoginMode ? 'No account yet?' : 'Already have an account?';
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const {
+      register,
+      handleSubmit: handleFormSubmit,
+      formState: { errors },
+      reset,
+    } = useForm();
 
+  // reset form when switching mode so validation clears
+  const switchMode = () => {
+    setLoginMode(prev => !prev);
+    reset();
+    setData('');
+  };
+
+  // called by react-hook-form with validated data
+  const onSubmit = async ({ username, password }) => {
     try {
-      // Decide which function to call based on mode
       const calledFunction = isLoginMode ? loginUser : registerUser;
       const result = await calledFunction(username, password);
 
       console.log('Result from server:', result);
-      
-      // Store server response
       setData(result);
 
-      // If login/signup was successful
       if (result.token) {
-        login(result.token); // Save token in context + localStorage
-        navigate('/employees'); // Redirect to employee directory
+        login(result.token);
+        reset();
+        navigate('/employees');
       } else {
         console.log('No token in result');
       }
@@ -53,19 +63,7 @@ export default function Main() {
     }
   };
 
-  // Toggle between login and signup modes
-  const handleSignUpText = () => {
-    setLoginMode(prev => !prev);
-  };
 
-  // Handle input updates
-  const handleUsernameInput = (e) => {
-    setUsername(e.target.value);
-  };
-
-  const handlePasswordInput = (e) => {
-    setPassword(e.target.value);
-  };
 
   return (
     <>
@@ -74,29 +72,38 @@ export default function Main() {
         {data.message}
       </div>
 
-      {/* Our reusable form component */}
-      <form className="login-form" onSubmit={handleSubmit}>
-      <div className="input-wrapper">
-        <input
-          onChange={handleUsernameInput} 
-          value={username}
-          type='text'
-          placeholder='Username' />
-        <input
-          onChange={handlePasswordInput} 
-          value={password}
-          type='password'
-          placeholder='Password' />
-      </div>
-      <button className="btn login-btn">
-        {submitBtnText}
-      </button>
-    </form>
+      {/* form using react-hook-form */}
+      <form className="login-form" onSubmit={handleFormSubmit(onSubmit)}>
+        <div className="input-wrapper">
+          <input
+            type="text"
+            placeholder="Username"
+            {...register('username', {
+              required: 'Username is required',
+              minLength: isLoginMode ? undefined : { value: 4, message: 'Minimum 4 characters' },
+            })}
+          />
+          {errors.username && <p className="error-status">{errors.username.message}</p>}
+
+          <input
+            type="password"
+            placeholder="Password"
+            {...register('password', {
+              required: 'Password is required',
+              minLength: isLoginMode ? undefined : { value: 8, message: 'Minimum 8 characters' },
+            })}
+          />
+          {errors.password && <p className="error-status">{errors.password.message}</p>}
+        </div>
+        <button className="btn login-btn">
+          {submitBtnText}
+        </button>
+      </form>
 
       {/* Toggle login/signup button */}
       <div className="signup-wrapper">
         <p>{modeText}</p>
-        <button onClick={handleSignUpText} className="btn login-btn signup-btn">
+        <button onClick={switchMode} className="btn login-btn signup-btn">
           {toggleBtnText}
         </button>
       </div>

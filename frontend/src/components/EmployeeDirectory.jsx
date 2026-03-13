@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { ProfileContext } from '../contexts/ProfileContext.jsx';
 import { useNavigate } from 'react-router';
-import { useForm } from 'react-hook-form';
 import Box from '@mui/material/Box';
 import Modal from '@mui/material/Modal';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
+import { useForm } from 'react-hook-form';
 
-function EmployeeDirectory() {
+export default function EmployeeDirectory() {
   const [employees, setEmployees] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -123,8 +123,6 @@ function EmployeeDirectory() {
   return (
     <div className='employee-page'>
       
-      <h1>Secure Employee Directory</h1>
-      
       {error && <div style={{ color: 'red', marginBottom: '10px' }}>Error: {error}</div>}
       
       <section className="top-controls">
@@ -236,4 +234,3 @@ function EmployeeDirectory() {
         );
 }
 
-export default EmployeeDirectory;
