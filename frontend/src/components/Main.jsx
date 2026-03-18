@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router';
 import { ProfileContext } from '../contexts/ProfileContext.jsx';
 import { registerUser, loginUser } from '../services/authService.js';
 import { useForm } from 'react-hook-form';
+import axios from 'axios';
+import ReCAPTCHA from 'react-google-recaptcha';
+import { ToastContainer, toast } from 'react-toastify';
 
 
 
@@ -18,9 +21,11 @@ export default function Main() {
   // State to store server response or error
   const [ data, setData ] = useState('');
   const [ err, setErr ] = useState(null);
-
+  const captchaKey = import.meta.env.VITE_APP_CAPTCHA_SITE_KEY;
   // State to toggle between login and signup/register mode
   const [ isLoginMode, setLoginMode ] = useState(true);
+  // State for CAPTCHA value
+  const [ captcha, setCaptcha ] = useState('');
 
   // Texts that change depending on login/signup mode
   const submitBtnText = isLoginMode ? 'Login' : 'Sign up';
@@ -41,24 +46,34 @@ export default function Main() {
     setData('');
   };
 
+  const onCaptchaChange = (value) => {
+    setCaptcha(value);
+  };
+
   // called by react-hook-form with validated data
   const onSubmit = async ({ username, password }) => {
+    console.log(captchaKey);
+    if (!captcha) {
+      toast.error('Please complete the CAPTCHA');
+      return;
+    }
     try {
       const calledFunction = isLoginMode ? loginUser : registerUser;
       const result = await calledFunction(username, password);
 
-      console.log('Result from server:', result);
       setData(result);
 
       if (result.token) {
+        toast.success(isLoginMode ? 'Login successful' : 'Registration successful');
         login(result.token);
         reset();
         navigate('/employees');
       } else {
-        console.log('No token in result');
+        toast.error(result.message || 'Operation failed');
       }
     } catch (err) {
       console.log(err);
+      toast.error(err.message || 'An error occurred');
       setErr(err);
     }
   };
@@ -67,11 +82,6 @@ export default function Main() {
 
   return (
     <>
-      {/* Display server messages */}
-      <div className={data.success ? 'status ok-status' : 'status error-status'}>
-        {data.message}
-      </div>
-
       {/* form using react-hook-form */}
       <form className="login-form" onSubmit={handleFormSubmit(onSubmit)}>
         <div className="input-wrapper">
@@ -93,6 +103,12 @@ export default function Main() {
               minLength: isLoginMode ? undefined : { value: 8, message: 'Minimum 8 characters' },
             })}
           />
+          <div className="captcha-container">
+            <ReCAPTCHA
+              sitekey={captchaKey}
+              onChange={onCaptchaChange}
+            />
+          </div>
           {errors.password && <p className="error-status">{errors.password.message}</p>}
         </div>
         <button className="btn login-btn">
@@ -107,6 +123,7 @@ export default function Main() {
           {toggleBtnText}
         </button>
       </div>
+      <ToastContainer position="top-right" autoClose={5000} />
     </>
   );
 }

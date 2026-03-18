@@ -18,9 +18,13 @@ export default function EmployeeDirectory() {
   const [search, setSearch] = useState('')
   const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  
   const handleOpen = () => setOpen(true);
+
   const handleClose = () => {
     setOpen(false);
+    setEditingEmployee(null);
     reset();
   };
 
@@ -75,6 +79,7 @@ export default function EmployeeDirectory() {
   };
 
   const onAdd = async (formData) => {
+    console.log(formData);
     try {
       const res = await fetch('http://localhost:8080/employees', {
         method: 'POST',
@@ -84,12 +89,35 @@ export default function EmployeeDirectory() {
         },
         body: JSON.stringify(formData),
       });
-      if (!res.ok) throw new Error('Failed to add');
+      if (!res.ok) {
+        handleClose();
+        throw new Error('Failed to add');
+      }
       await loadEmployees();
       reset();
       handleClose();
     } catch (err) {
       console.error('add employee error', err);
+      setError(err.message);
+    }
+  };
+
+  const onUpdate = async (formData) => {
+    try {
+      const res = await fetch(`http://localhost:8080/employees/${editingEmployee.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
+      if (!res.ok) throw new Error('Failed to update');
+      await loadEmployees();
+      reset();
+      handleClose();
+    } catch (err) {
+      console.error('update employee error', err);
       setError(err.message);
     }
   };
@@ -151,9 +179,9 @@ export default function EmployeeDirectory() {
             >
             <Box className="employee-modal">
                 <Typography variant="h6" color='black' mb={2}>
-                    Add Employee
+                    {editingEmployee ? 'Edit Employee' : 'Add Employee'}
                 </Typography>
-                <form onSubmit={handleFormSubmit(onAdd)}>
+                <form onSubmit={handleFormSubmit(editingEmployee ? onUpdate : onAdd)}>
                   <Stack spacing={2}>
                     <TextField
                       label="Employee Name"
@@ -176,8 +204,12 @@ export default function EmployeeDirectory() {
                       fullWidth
                       {...register('role', { required: 'Role is required',
                         minLength: {
-                            value: 4,
-                            message: 'Name must be at least 4 characters'
+                            value: 3,
+                            message: 'Role must be at least 3 characters'
+                        },
+                        pattern: {
+                            value: /^[A-Za-z\s]+$/,
+                            message: "Role can have only letters."
                         }
                        })}
                       error={!!errors.role}
@@ -186,7 +218,16 @@ export default function EmployeeDirectory() {
                     <TextField
                       label="Department"
                       fullWidth
-                      {...register('department', { required: 'Department is required' })}
+                      {...register('department', { required: 'Department is required',
+                        minLength: {
+                            value: 3,
+                            message: 'Department must be at least 3 characters'
+                        },
+                        pattern: {
+                            value: /^[A-Za-z0-9\s]+$/,
+                            message: "Department can have only letters or numbers."
+                        }
+                       })}
                       error={!!errors.department}
                       helperText={errors.department?.message}
                     />
@@ -196,7 +237,7 @@ export default function EmployeeDirectory() {
                       Cancel
                     </Button>
                     <Button type="submit">
-                      Submit
+                      {editingEmployee ? 'Update' : 'Submit'}
                     </Button>
                   </Box>
                 </form>
@@ -205,24 +246,31 @@ export default function EmployeeDirectory() {
        
       </section>
       <div className="table-section">
-      <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <table border="1" cellPadding="10" className='employee-table'>
         <thead>
-          <tr style={{ backgroundColor: '#f4f4' }}>
+          <tr>
             <th>ID</th>
             <th>Name</th>
             <th>Role</th>
             <th>Department</th>
+            <th>Actions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody >
           {employees.map(emp => (
             <tr key={emp.id}>
               <td>{emp.id}</td>
               <td>{emp.name}</td>
               <td>{emp.role}</td>
               <td>{emp.department}</td>
-              <td>
-                <button onClick={() => onDelete(emp.id)}>X</button>
+              <td style={{ textAlign: 'center' }}>
+                <button onClick={() => onDelete(emp.id)} className='btn update-delete-btn'>
+                  Delete</button>
+                <button className='btn update-delete-btn' onClick={() => {
+                  setEditingEmployee(emp);
+                  reset(emp);
+                  handleOpen();
+                }}>Update</button>
             </td>
             </tr>
           ))}

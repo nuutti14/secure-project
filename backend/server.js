@@ -6,6 +6,9 @@ import cors from 'cors';
 import express from 'express';
 import pool from './db.js';
 import {rateLimit} from 'express-rate-limit';
+import verifyCaptcha from './recaptchaMiddleware.js';
+import sanitize from 'sanitize';
+import validator from 'validator'
 
 // Load environment variables
 configDotenv();
@@ -18,6 +21,7 @@ const limiter = rateLimit({
 	ipv6Subnet: 56, // Set to 60 or 64 to be less aggressive, or 52 or 48 to be more aggressive
 	// store: ... , // Redis, Memcached, etc. See below.
 })
+
 // Secret key for signing JWTs
 const JWT_KEY = process.env.JWT_KEY;
 
@@ -28,7 +32,8 @@ const app = express();
 app.use(cors({origin: 'http://localhost:5173'}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/login', '/register', '/employees', limiter)
+app.use(('/login', '/register', '/employees'), limiter)
+app.use(sanitize.middleware)
 
 // helper to add user to database
 async function addUser({ username, password }) {
@@ -46,7 +51,7 @@ async function findUser(username) {
 }
 
 // Register Route
-app.post('/register', async (req, res) => {
+app.post('/register', verifyCaptcha, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -75,7 +80,6 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    console.log("test");
     
     const existing = await findUser(username);
 
@@ -98,13 +102,6 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// --- database helper -----------------------------------------------------
-/**
- * Insert a new employee into the `employees` table.
- *
- * @param {{name:string,role:string,department:string}} emp
- * @returns {Promise<object>} newly-created employee record
- */
 async function addEmployee({ name, role, department }) {
   const text = `INSERT INTO employees(name, role, department)
                 VALUES($1, $2, $3) RETURNING *`;
@@ -116,6 +113,16 @@ async function addEmployee({ name, role, department }) {
 async function deleteEmployee(id) {
   const text = `DELETE FROM employees WHERE id = $1 RETURNING *`;
   const { rows } = await pool.query(text, [id]);
+  return rows[0];
+}
+
+async function updateEmployee(id, { name, role, department }) {
+  const text = `UPDATE employees
+                SET name = $1, role = $2, department = $3
+                WHERE id = $4
+                RETURNING *`;
+  const values = [name, role, department, id];
+  const { rows } = await pool.query(text, values);
   return rows[0];
 }
 
@@ -173,9 +180,19 @@ app.get('/employees', loginMiddleware, async (req, res) => {
   }
 });
 
+function regexCheck(name, department, role) {
+  const nameRegex = /^[A-Za-z]+ [A-Za-z]+$/;
+  const depRegex = /^[A-Za-z0-9\s]+$/;
+  const roleRegex = /^[A-Za-z\s]+$/;
+  return (nameRegex.test(name) && roleRegex.test(role) && depRegex.test(department));
+}
+
 // add a new employee
 app.post('/employees', loginMiddleware, async (req, res) => {
   const { name, role, department } = req.body;
+  if (!regexCheck(name,department,role)) {
+    return res.status(400).json({ success: false, message: 'Invalid format' });
+  }
   if (!name || !role || !department) {
     return res.status(400).json({ success: false, message: 'name, role and department are required' });
   }
@@ -198,6 +215,21 @@ app.delete('/employees/:id', loginMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Employee not found' });
     }
     res.json({ success: true, message: 'Employee deleted', employee: deleted });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+app.put('/employees/:id', loginMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { name, role, department } = req.body;
+  try {
+    const updated = await updateEmployee(id, { name, role, department });
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+    res.json({ success: true, message: 'Employee updated', employee: updated });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server Error' });

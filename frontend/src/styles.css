@@ -101,7 +101,12 @@ input::placeholder {
     background: var(--accent-dark);
     border-color: var(--primary-accent);
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+}
 
+.update-delete-btn {
+  margin: .0.25em;
+  padding: .25em 1.5em;
+  font-size: 1rem;
 }
 
 .login-btn {
@@ -145,7 +150,6 @@ input::placeholder {
   padding: .25em 1.5em;
   font-size: 1.5rem;
 }
-
 
 .status {
   height: 24px;
@@ -221,13 +225,23 @@ input::placeholder {
   border-collapse: collapse;
 }
 
-.employee-table th {
-  background: #f4f4f4;
+.employee-table tr {
+  background-color: #f4f4;
+}
+
+.employee-table td {
+  background-color: var(--bg-dark);
 }
 
 .table-section {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  justify-content: center;
 }
 
+.captcha-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
