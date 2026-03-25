@@ -8,6 +8,7 @@ import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import { useForm } from 'react-hook-form';
+import { departmentValidation, nameValidation, roleValidation } from '../services/validationRules.js';
 
 export default function EmployeeDirectory() {
   const [employees, setEmployees] = useState([]);
@@ -77,6 +78,8 @@ export default function EmployeeDirectory() {
       navigate('/');
     }
   };
+
+
 
   const onAdd = async (formData) => {
     console.log(formData);
@@ -150,9 +153,10 @@ export default function EmployeeDirectory() {
 
   return (
     <div className='employee-page'>
-      
+      <div className='profile-btn-container'>
+      <button className='btn login-btn' onClick={()=>navigate('/profile')}>{user.user || 'Guest'}</button>
+      </div>
       {error && <div style={{ color: 'red', marginBottom: '10px' }}>Error: {error}</div>}
-      
       <section className="top-controls">
         <div className='search-group'>
         <input
@@ -186,48 +190,21 @@ export default function EmployeeDirectory() {
                     <TextField
                       label="Employee Name"
                       fullWidth
-                      {...register('name', { required: 'Name is required',
-                        minLength: {
-                            value: 4,
-                            message: 'Name must be at least 4 characters'
-                        },
-                        pattern: {
-                            value: /^[A-Za-z]+ [A-Za-z]+$/,
-                            message: "Name must be Firstname Lastname"
-                        }
-                       })}
+                      {...register('name', nameValidation())}
                       error={!!errors.name}
                       helperText={errors.name?.message}
                     />
                     <TextField
                       label="Role"
                       fullWidth
-                      {...register('role', { required: 'Role is required',
-                        minLength: {
-                            value: 3,
-                            message: 'Role must be at least 3 characters'
-                        },
-                        pattern: {
-                            value: /^[A-Za-z\s]+$/,
-                            message: "Role can have only letters."
-                        }
-                       })}
+                      {...register('role', roleValidation())}
                       error={!!errors.role}
                       helperText={errors.role?.message}
                     />
                     <TextField
                       label="Department"
                       fullWidth
-                      {...register('department', { required: 'Department is required',
-                        minLength: {
-                            value: 3,
-                            message: 'Department must be at least 3 characters'
-                        },
-                        pattern: {
-                            value: /^[A-Za-z0-9\s]+$/,
-                            message: "Department can have only letters or numbers."
-                        }
-                       })}
+                      {...register('department', departmentValidation())}
                       error={!!errors.department}
                       helperText={errors.department?.message}
                     />

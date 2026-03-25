@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router';
 import { ProfileContext } from '../contexts/ProfileContext.jsx';
 import { registerUser, loginUser } from '../services/authService.js';
 import { useForm } from 'react-hook-form';
-import axios from 'axios';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { ToastContainer, toast } from 'react-toastify';
+import { passwordValidation, usernameValidation } from '../services/validationRules.js';
 
 
 
@@ -37,7 +37,9 @@ export default function Main() {
       handleSubmit: handleFormSubmit,
       formState: { errors },
       reset,
-    } = useForm();
+    } = useForm({
+       mode: "onChange"
+    });
 
   // reset form when switching mode so validation clears
   const switchMode = () => {
@@ -59,7 +61,8 @@ export default function Main() {
     }
     try {
       const calledFunction = isLoginMode ? loginUser : registerUser;
-      const result = await calledFunction(username, password);
+      const requestCaptcha = captcha;
+      const result = await calledFunction(username, password, requestCaptcha);
 
       setData(result);
 
@@ -88,28 +91,23 @@ export default function Main() {
           <input
             type="text"
             placeholder="Username"
-            {...register('username', {
-              required: 'Username is required',
-              minLength: isLoginMode ? undefined : { value: 4, message: 'Minimum 4 characters' },
-            })}
+            {...register('username', usernameValidation(isLoginMode))}
           />
           {errors.username && <p className="error-status">{errors.username.message}</p>}
 
           <input
             type="password"
             placeholder="Password"
-            {...register('password', {
-              required: 'Password is required',
-              minLength: isLoginMode ? undefined : { value: 8, message: 'Minimum 8 characters' },
-            })}
+            {...register('password',passwordValidation(isLoginMode))}
           />
+          {errors.password && <p className="error-status">{errors.password.message}</p>}
           <div className="captcha-container">
             <ReCAPTCHA
               sitekey={captchaKey}
               onChange={onCaptchaChange}
             />
           </div>
-          {errors.password && <p className="error-status">{errors.password.message}</p>}
+          
         </div>
         <button className="btn login-btn">
           {submitBtnText}

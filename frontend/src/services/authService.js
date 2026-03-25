@@ -1,16 +1,16 @@
 const url = 'http://localhost:8080';
 
-const registerUser = async (username, password) => {
+const registerUser = async (username, password, captcha) => {
 
   try {
     const res = await fetch(`${url}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }, 
-      body: JSON.stringify({ username, password }) 
+      body: JSON.stringify({ username, password, captcha }) 
     });
 
     if (!res.ok) {
-      console.error('Registration failed');
+      console.error(res.message);
       return res.json();
     }
 
@@ -22,16 +22,13 @@ const registerUser = async (username, password) => {
 
 };
 
-const loginUser = async (username, password) => {
+const loginUser = async (username, password, captcha) => {
   try {
-    console.log('Attempting login with:', username);
     const res = await fetch(`${url}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, captcha }),
     });
-
-    console.log('Login response status:', res.status);
     
     if (!res.ok) {
       console.error('Login failed');
