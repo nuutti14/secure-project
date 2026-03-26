@@ -4,7 +4,7 @@ FROM node:20-alpine AS base
 WORKDIR /usr/src/app
 
 # Copy package manifests for caching
-COPY package.json package-lock.json* .
+COPY package.json package-lock.json* ./
 
 # Install deps
 RUN npm ci --omit=dev
