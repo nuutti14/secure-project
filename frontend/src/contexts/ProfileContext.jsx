@@ -28,7 +28,6 @@ export const ProfileProvider = ({ children }) => {
   // Persistent login across page refresh
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
-
     if (storedToken) {
       const decoded = jwtDecode(storedToken); // Decode token on page refresh
       setUser({ id: decoded.id, username: decoded.username }); // Restore user context state
