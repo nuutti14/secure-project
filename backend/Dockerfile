@@ -12,10 +12,10 @@ RUN npm ci --omit=dev
 # Copy app sources
 COPY . .
 
-# The app listens on 3000 by default (adjust if different)
-EXPOSE 3000
+# The app listens on 8080 by default (adjust if different)
+EXPOSE 8080
 
-# Use environment variable for port (default 3000)
-ENV PORT=3000
+# Use environment variable for port (default 8080)
+ENV PORT=8080
 
 CMD ["node", "server.js"]
