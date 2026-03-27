@@ -4,7 +4,7 @@ FROM node:20-alpine AS base
 WORKDIR /usr/src/app
 
 # Copy package manifests for caching
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 
 # Install deps
 RUN npm ci --omit=dev
@@ -12,10 +12,14 @@ RUN npm ci --omit=dev
 # Copy app sources
 COPY . .
 
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN chown -R appuser:appgroup /usr/src/app
+
+USER appuser
+
+
 # The app listens on 8080 by default (adjust if different)
 EXPOSE 8080
-
 # Use environment variable for port (default 8080)
 ENV PORT=8080
-
 CMD ["node", "server.js"]
