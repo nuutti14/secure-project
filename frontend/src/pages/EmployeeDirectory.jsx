@@ -9,12 +9,13 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import { useForm } from 'react-hook-form';
 import { departmentValidation, nameValidation, roleValidation } from '../services/validationRules.js';
+import { loadEmployees, addEmployee, updateEmployee, deleteEmployee } from '../services/employeeServices.js';
 
 export default function EmployeeDirectory() {
   const [employees, setEmployees] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { token } = useContext(ProfileContext);
+  const { token, isInitialized } = useContext(ProfileContext);
   const { user, logout } = useContext(ProfileContext);
   const [search, setSearch] = useState('')
   const navigate = useNavigate();
@@ -36,40 +37,85 @@ export default function EmployeeDirectory() {
     reset,
   } = useForm();
 
-  const loadEmployees = (searchTerm = '') => {
-    setLoading(true);
-    let url = 'http://localhost:8080/employees';
-    if (searchTerm) {
-      url += `?name=${encodeURIComponent(searchTerm)}`;
-    }
 
-    fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Security/Network error: ' + res.status);
-        return res.json();
-      })
-      .then((res) => {
-        setEmployees(res);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  };
-
+  // Fetch employees on component mount or when search changes
   useEffect(() => {
+    if (!isInitialized) {
+      return; 
+    }
     if (!token) {
       navigate('/');
       return;
     }
+    fetchEmployees(search);
+  }, [token, isInitialized, navigate]);
 
-    loadEmployees();
-  }, [token, navigate]);
+  // Fetch employees with proper state management
+  const fetchEmployees = async (searchTerm = '') => {
+    setLoading(true);
+    setError(null);
+    const result = await loadEmployees(token, searchTerm);
+    if (result.success === false) {
+      setError(result.message);
+      setEmployees([]);
+    } else {
+      setEmployees(result);
+    }
+    setLoading(false);
+  };
+
+  // Handle adding a new employee
+  const handleAddEmployee = async (formData) => {
+    try {
+      const result = await addEmployee(token, formData);
+      if (result.success === false) {
+        setError(result.message);
+        return;
+      }
+      await fetchEmployees(search);
+      reset();
+      handleClose();
+    } catch (err) {
+      setError(err.message || 'Failed to add employee');
+    }
+  };
+
+  // Handle updating an employee
+  const handleUpdateEmployee = async (formData) => {
+    try {
+      const result = await updateEmployee(token, editingEmployee.id, formData);
+      if (result.success === false) {
+        setError(result.message);
+        return;
+      }
+      await fetchEmployees(search);
+      reset();
+      handleClose();
+    } catch (err) {
+      setError(err.message || 'Failed to update employee');
+    }
+  };
+
+  // Handle deleting an employee
+  const handleDeleteEmployee = async (employeeId) => {
+    if (!window.confirm('Are you sure you want to delete this employee?')) return;
+    
+    try {
+      const result = await deleteEmployee(token, employeeId);
+      if (result.success === false) {
+        setError(result.message);
+        return;
+      }
+      await fetchEmployees(search);
+    } catch (err) {
+      setError(err.message || 'Failed to delete employee');
+    }
+  };
+
+  // Handle search
+  const handleSearch = () => {
+    fetchEmployees(search);
+  };
 
   const handleLogout = () => {
     const confirmation = confirm('Are you sure you wanna logout?');
@@ -79,75 +125,6 @@ export default function EmployeeDirectory() {
     }
   };
 
-
-
-  const onAdd = async (formData) => {
-    console.log(formData);
-    try {
-      const res = await fetch('http://localhost:8080/employees', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-      if (!res.ok) {
-        handleClose();
-        throw new Error('Failed to add');
-      }
-      await loadEmployees();
-      reset();
-      handleClose();
-    } catch (err) {
-      console.error('add employee error', err);
-      setError(err.message);
-    }
-  };
-
-  const onUpdate = async (formData) => {
-    try {
-      const res = await fetch(`http://localhost:8080/employees/${editingEmployee.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-      if (!res.ok) throw new Error('Failed to update');
-      await loadEmployees();
-      reset();
-      handleClose();
-    } catch (err) {
-      console.error('update employee error', err);
-      setError(err.message);
-    }
-  };
-
-  const onDelete = async (employeeId) => {
-    if (!window.confirm("Are you sure you want to delete this employee?")) return;
-
-    try {
-        const res = await fetch(`http://localhost:8080/employees/${employeeId}`, {
-        method: 'DELETE',
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
-
-    if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to delete');
-    }
-
-    await loadEmployees();
-
-    } catch (err) {
-        console.error('delete employee error', err);
-        setError(err.message);
-    }
-  };
 
   if (loading) return <div style={{ padding: '20px' }}>Loading...</div>;
 
@@ -169,7 +146,7 @@ export default function EmployeeDirectory() {
         />
         <button
           className='btn search-btn'
-          onClick={() => loadEmployees(search)}
+          onClick={handleSearch}
         >
           Search
         </button>
@@ -185,7 +162,7 @@ export default function EmployeeDirectory() {
                 <Typography variant="h6" color='black' mb={2}>
                     {editingEmployee ? 'Edit Employee' : 'Add Employee'}
                 </Typography>
-                <form onSubmit={handleFormSubmit(editingEmployee ? onUpdate : onAdd)}>
+                <form onSubmit={handleFormSubmit(editingEmployee ? handleUpdateEmployee : handleAddEmployee)}>
                   <Stack spacing={2}>
                     <TextField
                       label="Employee Name"
@@ -241,7 +218,7 @@ export default function EmployeeDirectory() {
               <td>{emp.role}</td>
               <td>{emp.department}</td>
               <td style={{ textAlign: 'center' }}>
-                <button onClick={() => onDelete(emp.id)} className='btn update-delete-btn'>
+                <button onClick={() => handleDeleteEmployee(emp.id)} className='btn update-delete-btn'>
                   Delete</button>
                 <button className='btn update-delete-btn' onClick={() => {
                   setEditingEmployee(emp);

@@ -2,8 +2,10 @@ import axios from 'axios';
 import asyncHandler from 'express-async-handler';
 import { configDotenv } from 'dotenv';
 
+// Load environment variables from .env to keep secrets out of source code.
 configDotenv();
 
+//The function verifies the captcha key by calling the captcha API
 const verifyCaptcha = asyncHandler(async (req, res, next) => {
   const { captcha } = req.body;
   if (!captcha) {

@@ -16,12 +16,10 @@ import { passwordValidation } from "../services/validationRules.js";
 
 export default function Profile() {
  // Extract user info and logout function from context
-  const { user, logout } = useContext(ProfileContext);
+  const { user, logout, isInitialized } = useContext(ProfileContext);
   const navigate = useNavigate();
   const { token } = useContext(ProfileContext);
   const [open, setOpen] = React.useState(false);
-  const [oldPassword, setOldPassword] = useState("");
-  const [oldPasswordValid, setOldPasswordValid] = useState(null);
   const [error, setError] = useState(null);
   
 
@@ -35,6 +33,13 @@ export default function Profile() {
       mode: "onChange"
   });
 
+  // Check authentication on initialization
+  useEffect(() => {
+    if (isInitialized && !token) {
+      navigate('/');
+    }
+  }, [isInitialized, token, navigate]);
+
   // Handler for logout button
   const handleLogout = () => {
     const confirmation = confirm('Are you sure you wanna logout?');
@@ -43,37 +48,26 @@ export default function Profile() {
       navigate('/'); // Redirect to home page (login screen)
     }
   };
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (oldPassword.length > 0) verifyOldPassword(oldPassword);
-    }, 500);
-
-    return () => clearTimeout(timeout);
-  }, [oldPassword]);
 
   
   const handleOpen = () => setOpen(true);
 
   const handleClose = () => {
     setOpen(false);
-    setOldPassword('');
-    setOldPasswordValid(null);
     reset();
   };
 
-  const onUpdate = async ({ password, confirmPassword }) => {
-    if (!oldPasswordValid) {
-      toast.error('Please verify old password first');
-      return;
-    }
-    try {
+  const onUpdate = async (value) => {
+    const oldPw = value.oldPassword;
+    const newPw = value.newPassword;
+      try {
       const res = await fetch(`http://localhost:8080/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ oldPassword, newPassword: password })
+        body: JSON.stringify({ oldPassword: oldPw, newPassword: newPw })
       });
 
       if (!res.ok) {
@@ -83,8 +77,6 @@ export default function Profile() {
 
       const data = await res.json();
       toast.success(data.message || 'Password changed successfully');
-      setOldPassword('');
-      setOldPasswordValid(null);
       reset();
       handleClose();
     } catch (err) {
@@ -94,28 +86,6 @@ export default function Profile() {
   };
 
 
-  const verifyOldPassword = async (value) => {
-    try {
-      const res = await fetch(`http://localhost:8080/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ oldPassword })
-      });
-
-      if (!res.ok) {
-        throw new Error('Verification failed');
-      }
-
-      const data = await res.json();
-      setOldPasswordValid(data.valid);
-    } catch (err) {
-      console.error('Verification error:', err);
-      setError(err.message);
-    }
-  };
 
   return (
     <div className="profile-page">
@@ -145,39 +115,32 @@ export default function Profile() {
             <TextField
               label="Old password"
               type="password"
-              value={oldPassword}
-              onChange={(e) => setOldPassword(e.target.value)}
-              error={oldPasswordValid === false}
-              helperText={
-                oldPasswordValid === false
-                  ? "Old password incorrect"
-                  : oldPasswordValid === true
-                  ? "Password correct"
-                  : ""
-              }
+              {...register('oldPassword', 
+                {required: "Old password is required" })}
+              error={!!errors.newPassword}
+              helperText={errors.oldPassword?.message}
             />
             <TextField
               label="New password"
               type="password"
-              disabled={!oldPasswordValid}
-              {...register('password', { 
-                ...passwordValidation(false), 
+              {...register('newPassword', { 
+                ...passwordValidation(false),
                 validate: (value) =>
-                  value === oldPassword || "Cannot be same"
+                  value !== watch("oldPassword") || "New password must be different"   
               })}
-              error={!!errors.password}
-              helperText={errors.password?.message}
+              error={!!errors.newPassword}
+              helperText={errors.newPassword?.message}
             />
             <TextField
               label="Confirm New password"
               type="password"
-              disabled={!oldPasswordValid || !watch("password") || errors.password}
-              {...register("confirmPassword", {
+              {...register('confirmNewPassword', {
+                required: "Confirmation is required",
                 validate: (value) =>
-                  value === watch("password") || "Passwords do not match"
+                  value === watch("newPassword") || "Passwords do not match"
               })}
-              error={!!errors.confirmPassword}
-              helperText={errors.confirmPassword?.message}
+              error={!!errors.confirmNewPassword}
+              helperText={errors.confirmNewPassword?.message}
             />
           </Stack>
           <Box mt={3} display="flex" justifyContent="flex-end" gap={1}>
@@ -186,7 +149,11 @@ export default function Profile() {
             </Button>
             <Button 
               type="submit"
-              disabled = {errors.confirmPassword}
+              disabled={
+                errors.newPassword ||
+                errors.confirmNewPassword ||
+                errors.oldPassword
+              }
             >
               Change
             </Button>

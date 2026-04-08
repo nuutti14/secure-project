@@ -9,6 +9,7 @@ export const ProfileProvider = ({ children }) => {
   // Store user info in state
   const [ user, setUser ] = useState();
   const [ token, setToken ] = useState(null);
+  const [ isInitialized, setIsInitialized ] = useState(false); // Track if token has been restored from localStorage
 
   // Function to log in a user
   const login = (token) => {
@@ -22,6 +23,7 @@ export const ProfileProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token'); // Clear token from localStorage
     setToken(null);
+    setUser(null);
   };
 
   // On initial load, check if there's a token and decode it
@@ -29,14 +31,20 @@ export const ProfileProvider = ({ children }) => {
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
-      const decoded = jwtDecode(storedToken); // Decode token on page refresh
-      setUser({ id: decoded.id, username: decoded.username }); // Restore user context state
-      setToken(storedToken); // Restore token in context state
+      try {
+        const decoded = jwtDecode(storedToken); // Decode token on page refresh
+        setUser({ id: decoded.id, username: decoded.username }); // Restore user context state
+        setToken(storedToken); // Restore token in context state
+      } catch (err) {
+        console.error('Failed to decode token:', err);
+        localStorage.removeItem('token'); // Remove invalid token
+      }
     }
+    setIsInitialized(true); // Mark initialization as complete
   }, []);
 
   // Provide context value to children
-  const value = { user, token, login, logout };
+  const value = { user, token, login, logout, isInitialized };
 
   return (
     <ProfileContext.Provider value={ value }>

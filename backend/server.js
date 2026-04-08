@@ -9,20 +9,19 @@ import { addEmployee, updateEmployee, deleteEmployee,
   findUser, addUser, getEmployees, updatePassword, findUserName } from './crud.js';
 
 // Load environment variables from .env to keep secrets out of source code.
-// This is a security best practice (no hard-coded keys in the repo).
 configDotenv();
 
 // Rate limiter to mitigate brute-force and DOS risk.
-// Limits number of requests per IP, reducing attacker ability to test many credentials quickly.
+// Limits number of requests per IP.
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute window
   limit: 100, // each IP max 100 requests per window (tunable)
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   ipv6Subnet: 56,
-  // In production, use an external store (Redis/memcached) so limits persist across server instances.
 });
-// Secret key for signing JWT
+
+//Secret key for signing JWT
 const JWT_KEY = process.env.JWT_KEY;
 
 // Initialize the Express app
@@ -33,13 +32,15 @@ app.use(cors({origin: 'http://localhost:5173'}));
 // Parse incoming json data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+//Use the limiter for these routes
 app.use(['/login', '/register', '/employees'], limiter)
 
-// Validate and sanitise fields on employee creation/update in addition to DB parameterization.
+// Validate and sanitise fields on employee creation/update.
 // Limits what users can send to the database and avoids injections via malformed input.
+// Returns true if all parameters pass the check.
 function regexCheck(name, department, role) {
   const nameRegex = /^[A-Za-z]+ [A-Za-z]+$/; // first and last name only
-  const depRegex = /^[A-Za-z0-9\s]+$/; // letters and numbers only
+  const depRegex = /^[A-Za-z0-9\s]+$/; // letters, numbers and spaces only
   const roleRegex = /^[A-Za-z\s]+$/; // letters and spaces only
   return nameRegex.test(name) && roleRegex.test(role) && depRegex.test(department);
 }
@@ -59,12 +60,6 @@ const loginMiddleware = async (req, res, next) => {
   } catch (err) {
     return res.status(401).json({ message: "Invalid token" });
   }
-  // Verify JWT signature, expiration, and claims.
-  // jwt.verify(token, JWT_KEY, (err, user) => {
-  //   if (err) return res.status(403).json({ success: false, message: 'Invalid token' });
-  //   req.user = user;
-  //   next();
-  // });
 };
 
 
@@ -201,23 +196,9 @@ app.put('/employees/:id', loginMiddleware, async (req, res) => {
   }
 });
 
-app.post('/verify', loginMiddleware, async (req, res) => {
-  const { oldPassword } = req.body;
-  const userId = req.user.id;
-  try {
-    const user = await findUser(userId);
-    const match = await bcryptjs.compare(oldPassword, user.password);
-    return res.json({valid: match});
-  } catch(err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Server Error' });
-  }
-});
-
 app.post('/change-password', loginMiddleware, async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   const userId = req.user.id;
-  console.log(oldPassword, newPassword);
   try {
     const user = await findUser(userId);
     const match = await bcryptjs.compare(oldPassword, user.password);

@@ -46,6 +46,7 @@ export default function Main() {
     setLoginMode(prev => !prev);
     reset();
     setData('');
+    setCaptcha('');
   };
 
   const onCaptchaChange = (value) => {
@@ -54,7 +55,6 @@ export default function Main() {
 
   // called by react-hook-form with validated data
   const onSubmit = async ({ username, password }) => {
-    console.log(captchaKey);
     if (!captcha) {
       toast.error('Please complete the CAPTCHA');
       return;
@@ -73,11 +73,13 @@ export default function Main() {
         navigate('/employees');
       } else {
         toast.error(result.message || 'Operation failed');
+        setCaptcha('');
       }
     } catch (err) {
       console.log(err);
       toast.error(err.message || 'An error occurred');
       setErr(err);
+      setCaptcha('');
     }
   };
 
@@ -101,12 +103,19 @@ export default function Main() {
             {...register('password',passwordValidation(isLoginMode))}
           />
           {errors.password && <p className="error-status">{errors.password.message}</p>}
-          <div className="captcha-container">
-            <ReCAPTCHA
-              sitekey={captchaKey}
-              onChange={onCaptchaChange}
-            />
-          </div>
+          
+          {!captcha ? (
+            <div className="captcha-container">
+              <ReCAPTCHA
+                sitekey={captchaKey}
+                onChange={onCaptchaChange}
+              />
+            </div>
+          ) : (
+            <div className="captcha-container captcha-verified">
+              <p className="success-status">✓ CAPTCHA verified</p>
+            </div>
+          )}
           
         </div>
         <button className="btn login-btn">

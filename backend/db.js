@@ -1,6 +1,7 @@
 import {Pool} from 'pg';
 import { configDotenv } from 'dotenv';
 
+// Load environment variables from .env to keep secrets out of source code.
 configDotenv();
 
 const pool = new Pool({
@@ -15,7 +16,5 @@ pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
   process.exit(-1);
 });
-
-
 
 export default pool;
