@@ -6,27 +6,25 @@ import Box from "@mui/material/Box";
 import Stack from '@mui/material/Stack';
 import Button from "@mui/material/Button";
 import TextField from '@mui/material/TextField'
-import React, { useState, useEffect, useContext } from 'react';
+import  { useState, useEffect, useContext } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast, ToastContainer } from 'react-toastify';
 import { passwordValidation } from "../services/validationRules.js";
+import { changePassword } from "../services/profileService.js";
 
 
 
 
 export default function Profile() {
- // Extract user info and logout function from context
-  const { user, logout, isInitialized } = useContext(ProfileContext);
-  const navigate = useNavigate();
-  const { token } = useContext(ProfileContext);
-  const [open, setOpen] = React.useState(false);
-  const [error, setError] = useState(null);
+  const { user, logout, isInitialized, token } = useContext(ProfileContext); // Extract user info and logout function from context
+  const navigate = useNavigate(); // Hook from React Router to navigate pages
+  const [open, setOpen] = useState(false); //usestate for modal
   
-
+  //Initialize the useform
   const {
       register,
       handleSubmit: handleFormSubmit,
-      formState: { errors },
+      formState: { errors, isValid },
       watch,
       reset,
     } = useForm({
@@ -49,56 +47,35 @@ export default function Profile() {
     }
   };
 
-  
+  //Handle modal opening
   const handleOpen = () => setOpen(true);
 
+  //Handle modal closing
   const handleClose = () => {
     setOpen(false);
     reset();
   };
 
-  const onUpdate = async (value) => {
+  //Handle password update
+  const handlePasswordUpdate = async (value) => {
     const oldPw = value.oldPassword;
     const newPw = value.newPassword;
-      try {
-      const res = await fetch(`http://localhost:8080/change-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ oldPassword: oldPw, newPassword: newPw })
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to change password');
-      }
-
-      const data = await res.json();
-      toast.success(data.message || 'Password changed successfully');
-      reset();
-      handleClose();
-    } catch (err) {
-      console.error('Password change error:', err);
-      toast.error(err.message || 'An error occurred');
+    const result = await changePassword(token, oldPw, newPw);
+    if (result.success === false) {
+      toast.error(result.message);
+      return;
     }
+    toast.success('Password changed successfully');
+    await fetchProfile(); // refresh if needed
+    handleClose();
   };
-
 
 
   return (
     <div className="profile-page">
-      {/* Back button - top left */}
       <button onClick={() => navigate('/employees')} className="btn back-btn">← Back</button>
-
-      {/* Greeting - center */}
       <h1 className="greeting">Hello, {user?.username || 'Guest'}!</h1>
-
-      {/* Edit Profile button */}
       <button onClick={()=>handleOpen()} className="btn logout-btn">Edit Profile</button>
-
-      {/* Logout button - bottom center */}
       <button onClick={handleLogout} className="btn logout-btn">Logout</button>
       <Modal
         open={open}
@@ -110,14 +87,14 @@ export default function Profile() {
         <Typography variant="h6" color='black' mb={2}>
             Change password
         </Typography>
-        <form onSubmit={handleFormSubmit(onUpdate)}>
+        <form onSubmit={handleFormSubmit(handlePasswordUpdate)}>
           <Stack spacing={2}>
             <TextField
               label="Old password"
               type="password"
               {...register('oldPassword', 
                 {required: "Old password is required" })}
-              error={!!errors.newPassword}
+              error={!!errors.oldPassword}
               helperText={errors.oldPassword?.message}
             />
             <TextField
@@ -149,11 +126,7 @@ export default function Profile() {
             </Button>
             <Button 
               type="submit"
-              disabled={
-                errors.newPassword ||
-                errors.confirmNewPassword ||
-                errors.oldPassword
-              }
+              disabled={!isValid}
             >
               Change
             </Button>

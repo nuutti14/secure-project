@@ -10,33 +10,25 @@ import { passwordValidation, usernameValidation } from '../services/validationRu
 
 
 export default function Main() {
-  // Access the login function from context
-  const { login } = useContext(ProfileContext);
-
-  // Hook from React Router to navigate pages
-  const navigate = useNavigate();
-
-  // Validation form management (username/password)
-
-  // State to store server response or error
-  const [ data, setData ] = useState('');
-  const [ err, setErr ] = useState(null);
-  const captchaKey = import.meta.env.VITE_APP_CAPTCHA_SITE_KEY;
-  // State to toggle between login and signup/register mode
-  const [ isLoginMode, setLoginMode ] = useState(true);
-  // State for CAPTCHA value
-  const [ captcha, setCaptcha ] = useState('');
-
+  const { login } = useContext(ProfileContext); // Access the login function from context
+  const navigate = useNavigate(); // Hook from React Router to navigate pages
+  const [ data, setData ] = useState(''); //Usesate to store data
+  const [ isLoginMode, setLoginMode ] = useState(true); // State to toggle between login and signup/register mode
+  const [ captcha, setCaptcha ] = useState(''); // State for CAPTCHA value
   // Texts that change depending on login/signup mode
   const submitBtnText = isLoginMode ? 'Login' : 'Sign up';
   const toggleBtnText = isLoginMode ? 'Sign up' : 'Login';
   const modeText = isLoginMode ? 'No account yet?' : 'Already have an account?';
+  //Import captcha key from env
+  const captchaKey = import.meta.env.VITE_APP_CAPTCHA_SITE_KEY;
 
+  //Initialize the useForm
   const {
       register,
       handleSubmit: handleFormSubmit,
       formState: { errors },
       reset,
+      watch
     } = useForm({
        mode: "onChange"
     });
@@ -49,6 +41,7 @@ export default function Main() {
     setCaptcha('');
   };
 
+  //set captcha
   const onCaptchaChange = (value) => {
     setCaptcha(value);
   };
@@ -76,13 +69,10 @@ export default function Main() {
         setCaptcha('');
       }
     } catch (err) {
-      console.log(err);
       toast.error(err.message || 'An error occurred');
-      setErr(err);
       setCaptcha('');
     }
   };
-
 
 
   return (
@@ -100,9 +90,23 @@ export default function Main() {
           <input
             type="password"
             placeholder="Password"
-            {...register('password',passwordValidation(isLoginMode))}
+            {...register('password',
+              passwordValidation(isLoginMode))}
           />
           {errors.password && <p className="error-status">{errors.password.message}</p>}
+          {!isLoginMode && 
+            <input
+            type="password"
+            placeholder="Password"
+            {...register('confirmPassword',{
+              required: "Confirmation is required",
+              validate: (value) =>
+                  value === watch("password") || "Passwords do not match"  
+            })}
+            />
+          }
+          {errors.confirmPassword && <p className="error-status">
+            {errors.confirmPassword.message}</p>}
           
           {!captcha ? (
             <div className="captcha-container">
@@ -130,6 +134,7 @@ export default function Main() {
           {toggleBtnText}
         </button>
       </div>
+      {/* Toast container */}
       <ToastContainer position="top-right" autoClose={5000} />
     </>
   );

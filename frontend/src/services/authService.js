@@ -1,19 +1,17 @@
-const url = 'http://localhost:8080';
+const url = 'http://localhost:8080'; //base url for backend
 
+//Call the register user endpoint
 const registerUser = async (username, password, captcha) => {
-
   try {
     const res = await fetch(`${url}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }, 
       body: JSON.stringify({ username, password, captcha }) 
     });
-
     if (!res.ok) {
-      console.error(res.message);
+      console.error("Registeration failed");
       return res.json();
     }
-
     return res.json();
   } catch (err) {
     console.error('Registration error:', err);
@@ -22,6 +20,7 @@ const registerUser = async (username, password, captcha) => {
 
 };
 
+//Call the login user endpoint
 const loginUser = async (username, password, captcha) => {
   try {
     const res = await fetch(`${url}/login`, {

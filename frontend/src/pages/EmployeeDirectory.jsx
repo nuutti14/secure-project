@@ -10,10 +10,12 @@ import TextField from '@mui/material/TextField';
 import { useForm } from 'react-hook-form';
 import { departmentValidation, nameValidation, roleValidation } from '../services/validationRules.js';
 import { loadEmployees, addEmployee, updateEmployee, deleteEmployee } from '../services/employeeServices.js';
+import { ToastContainer, toast } from 'react-toastify';
+
+
 
 export default function EmployeeDirectory() {
   const [employees, setEmployees] = useState([]);
-  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const { token, isInitialized } = useContext(ProfileContext);
   const { user, logout } = useContext(ProfileContext);
@@ -22,23 +24,39 @@ export default function EmployeeDirectory() {
   const [open, setOpen] = React.useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   
-  const handleOpen = () => setOpen(true);
-
-  const handleClose = () => {
-    setOpen(false);
-    setEditingEmployee(null);
-    reset();
-  };
 
   const {
     register,
     handleSubmit: handleFormSubmit,
     formState: { errors },
     reset,
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      name: '',
+      role: '',
+      department: ''
+    }
+  });
+
+  const handleOpenAdd = () => {
+    setEditingEmployee(null);
+    reset({ name: '', role: '', department: '' });
+    setOpen(true);
+  };
+
+  const handleOpenEdit = (emp) => {
+    setEditingEmployee(emp);
+    reset(emp);
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setEditingEmployee(null);
+    reset({ name: '', role: '', department: '' });
+  };
 
 
-  // Fetch employees on component mount or when search changes
   useEffect(() => {
     if (!isInitialized) {
       return; 
@@ -50,13 +68,12 @@ export default function EmployeeDirectory() {
     fetchEmployees(search);
   }, [token, isInitialized, navigate]);
 
-  // Fetch employees with proper state management
+  
   const fetchEmployees = async (searchTerm = '') => {
     setLoading(true);
-    setError(null);
     const result = await loadEmployees(token, searchTerm);
     if (result.success === false) {
-      setError(result.message);
+      toast.error(result.message);
       setEmployees([]);
     } else {
       setEmployees(result);
@@ -64,56 +81,59 @@ export default function EmployeeDirectory() {
     setLoading(false);
   };
 
-  // Handle adding a new employee
+  
   const handleAddEmployee = async (formData) => {
     try {
       const result = await addEmployee(token, formData);
       if (result.success === false) {
-        setError(result.message);
+        toast.error(result.message);
         return;
       }
       await fetchEmployees(search);
-      reset();
       handleClose();
+      setTimeout(() => toast.success("Employee added successfully"), 300);
     } catch (err) {
-      setError(err.message || 'Failed to add employee');
+      toast.error(err.message || 'Failed to add employee');
     }
   };
 
-  // Handle updating an employee
+  
   const handleUpdateEmployee = async (formData) => {
     try {
       const result = await updateEmployee(token, editingEmployee.id, formData);
       if (result.success === false) {
-        setError(result.message);
+        toast.error(result.message);
         return;
       }
       await fetchEmployees(search);
-      reset();
       handleClose();
+      setTimeout(() => toast.success("Employee updated successfully"), 300);
     } catch (err) {
-      setError(err.message || 'Failed to update employee');
+      toast.error(err.message || 'Failed to update employee');
     }
   };
 
-  // Handle deleting an employee
+  
   const handleDeleteEmployee = async (employeeId) => {
     if (!window.confirm('Are you sure you want to delete this employee?')) return;
     
     try {
       const result = await deleteEmployee(token, employeeId);
       if (result.success === false) {
-        setError(result.message);
+        toast.error(result.message);
         return;
       }
+      console.log("moi");
+      toast.success("Employee deleted successfully");
       await fetchEmployees(search);
     } catch (err) {
-      setError(err.message || 'Failed to delete employee');
+      toast.error(err.message || 'Failed to delete employee');
     }
   };
 
-  // Handle search
+  
   const handleSearch = () => {
+    toast.success("tests");
     fetchEmployees(search);
   };
 
@@ -129,11 +149,11 @@ export default function EmployeeDirectory() {
   if (loading) return <div style={{ padding: '20px' }}>Loading...</div>;
 
   return (
+    <>
     <div className='employee-page'>
       <div className='profile-btn-container'>
       <button className='btn login-btn' onClick={()=>navigate('/profile')}>{user.user || 'Guest'}</button>
       </div>
-      {error && <div style={{ color: 'red', marginBottom: '10px' }}>Error: {error}</div>}
       <section className="top-controls">
         <div className='search-group'>
         <input
@@ -150,7 +170,7 @@ export default function EmployeeDirectory() {
         >
           Search
         </button>
-        <button className='btn add-btn' onClick={handleOpen}>Add Employee</button>
+        <button className='btn add-btn' onClick={handleOpenAdd}>Add Employee</button>
         </div>
             <Modal
                 open={open}
@@ -220,11 +240,7 @@ export default function EmployeeDirectory() {
               <td style={{ textAlign: 'center' }}>
                 <button onClick={() => handleDeleteEmployee(emp.id)} className='btn update-delete-btn'>
                   Delete</button>
-                <button className='btn update-delete-btn' onClick={() => {
-                  setEditingEmployee(emp);
-                  reset(emp);
-                  handleOpen();
-                }}>Update</button>
+                <button className='btn update-delete-btn' onClick={()=>handleOpenEdit(emp)}>Update</button>
             </td>
             </tr>
           ))}
@@ -232,7 +248,10 @@ export default function EmployeeDirectory() {
       </table>
        </div>
        <button onClick={handleLogout} className="btn logout-btn">Logout</button>
+       <ToastContainer position="top-right" autoClose={5000} />
     </div>
-        );
+    
+    </>
+    );
 }
 

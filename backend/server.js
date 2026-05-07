@@ -43,7 +43,14 @@ function regexCheck(name, department, role) {
   const depRegex = /^[A-Za-z0-9\s]+$/; // letters, numbers and spaces only
   const roleRegex = /^[A-Za-z\s]+$/; // letters and spaces only
   return nameRegex.test(name) && roleRegex.test(role) && depRegex.test(department);
-}
+};
+
+
+function passwordValidation(pw) {
+  const pwRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)\S{12,}$/;
+  return pwRegex.test(pw);
+};
+
 
 // Middleware to protect API endpoints using JWT.
 // Ensures only requests with valid token can access user/employee operations.
@@ -150,9 +157,6 @@ app.post('/employees', loginMiddleware, async (req, res) => {
   if (!regexCheck(name, department, role)) {
     return res.status(400).json({ success: false, message: 'Invalid format' });
   }
-  if (!name || !role || !department) {
-    return res.status(400).json({ success: false, message: 'name, role and department are required' });
-  }
 
   try {
     const newEmp = await addEmployee({ name, role, department });
@@ -183,9 +187,11 @@ app.delete('/employees/:id', loginMiddleware, async (req, res) => {
 app.put('/employees/:id', loginMiddleware, async (req, res) => {
   const { id } = req.params;
   const { name, role, department } = req.body;
-
+  if (!regexCheck(name, department, role)) {
+    return res.status(400).json({ success: false, message: 'Invalid format' });
+  }
   try {
-    const updated = await updateEmployee(id, { name, role, department });
+    const updated = await updateEmployee(id, name, role, department );
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Employee not found' });
     }
@@ -199,6 +205,9 @@ app.put('/employees/:id', loginMiddleware, async (req, res) => {
 app.post('/change-password', loginMiddleware, async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   const userId = req.user.id;
+  if (!passwordValidation(newPassword)) {
+    return res.status(400).json({ success: false, message: 'Invalid format' });
+  }
   try {
     const user = await findUser(userId);
     const match = await bcryptjs.compare(oldPassword, user.password);

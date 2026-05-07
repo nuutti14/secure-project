@@ -42,7 +42,7 @@ export async function deleteEmployee(id) {
 }
 
 //Update employee with the given id and new values
-export async function updateEmployee(id, { name, role, department }) {
+export async function updateEmployee( id, name, role, department ) {
   const text = `UPDATE employees
                 SET name = $1, role = $2, department = $3
                 WHERE id = $4
@@ -74,6 +74,6 @@ export async function updatePassword(id, password) {
                     RETURNING *`;
     const values = [password, id];
     const { rows } = await pool.query(text, values);
-    return rows;
+    return rows[0];
     
 }
