@@ -51,6 +51,9 @@ function passwordValidation(pw) {
   return pwRegex.test(pw);
 };
 
+function usernameValidation(username) {
+
+};
 
 // Middleware to protect API endpoints using JWT.
 // Ensures only requests with valid token can access user/employee operations.

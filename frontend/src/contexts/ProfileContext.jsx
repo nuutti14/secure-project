@@ -14,8 +14,8 @@ export const ProfileProvider = ({ children }) => {
   // Function to log in a user
   const login = (token) => {
     localStorage.setItem('token', token); // Save token to localStorage
-    const decoded = jwtDecode(token); // Decode JWT to get username
-    setUser({id: decoded.id, username: decoded.username }); // Store username in context state
+    const decoded = jwtDecode(token); // Decode JWT to get username and id
+    setUser({id: decoded.id, username: decoded.username }); // Store username and id in context state
     setToken(token); // Store token in context state
   };
 
